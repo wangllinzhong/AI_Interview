@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI面试助手 | 智能面试解决方案</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #4361ee;
+            --primary-dark: #3a56d4;
+            --secondary: #7209b7;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --success: #4cc9f0;
+            --warning: #f9c74f;
+            --danger: #f94144;
+            --gray: #6c757d;
+            --light-gray: #e9ecef;
+            --border-radius: 12px;
+            --box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
+            color: var(--dark);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            padding: 30px 0;
+            margin-bottom: 20px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .logo-icon {
+            background: var(--primary);
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            box-shadow: 0 4px 10px rgba(67, 97, 238, 0.3);
+        }
+
+        h1 {
+            font-size: 2.8rem;
+            color: var(--primary);
+            margin-bottom: 10px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            font-size: 1.25rem;
+            color: var(--gray);
+            max-width: 700px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .process-steps {
+            display: flex;
+            justify-content: space-between;
+            margin: 40px auto;
+            max-width: 800px;
+            position: relative;
+        }
+
+        .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 2;
+            flex: 1;
+        }
+
+        .step-icon {
+            width: 60px;
+            height: 60px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 15px;
+            box-shadow: var(--box-shadow);
+            border: 3px solid var(--light-gray);
+            color: var(--gray);
+            transition: var(--transition);
+        }
+
+        .step.active .step-icon {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .step.completed .step-icon {
+            background: var(--success);
+            color: white;
+            border-color: var(--success);
+        }
+
+        .step-text {
+            font-weight: 600;
+            color: var(--gray);
+            text-align: center;
+        }
+
+        .step.active .step-text {
+            color: var(--primary);
+        }
+
+        .step.completed .step-text {
+            color: var(--success);
+        }
+
+        .progress-bar {
+            position: absolute;
+            top: 30px;
+            left: 10%;
+            width: 80%;
+            height: 8px;
+            background: var(--light-gray);
+            border-radius: 4px;
+            z-index: 1;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--primary);
+            width: 0%;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .card-container {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            padding: 40px;
+            margin-bottom: 40px;
+            min-height: 500px;
+            position: relative;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--light-gray);
+        }
+
+        .card-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            margin-right: 15px;
+        }
+
+        .card-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .card-content {
+            padding: 10px 0;
+        }
+
+        .upload-area {
+            border: 2px dashed var(--light-gray);
+            border-radius: var(--border-radius);
+            padding: 50px 20px;
+            text-align: center;
+            transition: var(--transition);
+            cursor: pointer;
+            margin-bottom: 30px;
+            background: rgba(248, 249, 250, 0.5);
+        }
+
+        .upload-area:hover, .upload-area.dragover {
+            border-color: var(--primary);
+            background: rgba(67, 97, 238, 0.05);
+        }
+
+        .upload-icon {
+            font-size: 56px;
+            color: var(--primary);
+            margin-bottom: 20px;
+        }
+
+        .upload-text {
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            color: var(--gray);
+        }
+
+        .upload-text strong {
+            color: var(--primary);
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: var(--dark);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid var(--light-gray);
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+
+        .form-control:focus {
+            border-color: var(--primary);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+        }
+
+        textarea.form-control {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 14px 28px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            text-align: center;
+            text-decoration: none;
+            box-shadow: 0 4px 6px rgba(67, 97, 238, 0.2);
+        }
+
+        .btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 10px rgba(67, 97, 238, 0.3);
+        }
+
+        .btn:disabled {
+            background: var(--light-gray);
+            color: var(--gray);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-block {
+            display: block;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .btn-secondary {
+            background: var(--secondary);
+        }
+
+        .btn-secondary:hover {
+            background: #65149e;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--primary);
+            color: var(--primary);
+        }
+
+        .btn-outline:hover {
+            background: rgba(67, 97, 238, 0.1);
+        }
+
+        .interview-container {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .question-card {
+            background: var(--light);
+            border-radius: var(--border-radius);
+            padding: 25px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+        }
+
+        .question-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .question-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+            margin-right: 15px;
+        }
+
+        .question-text {
+            font-weight: 600;
+            color: var(--dark);
+            font-size: 1.2rem;
+        }
+
+        .answer-area {
+            margin-top: 15px;
+        }
+
+        .report-content {
+            background: rgba(248, 249, 250, 0.7);
+            border-radius: var(--border-radius);
+            padding: 30px;
+            margin: 30px 0;
+            max-height: 350px;
+            overflow-y: auto;
+        }
+
+        .report-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .report-item {
+            margin-bottom: 25px;
+            padding-bottom: 25px;
+            border-bottom: 1px solid var(--light-gray);
+        }
+
+        .report-question {
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: var(--dark);
+        }
+
+        .report-answer {
+            margin-bottom: 15px;
+            padding-left: 20px;
+            color: var(--gray);
+        }
+
+        .report-feedback {
+            background: rgba(76, 201, 240, 0.1);
+            border-left: 4px solid var(--success);
+            padding: 15px;
+            border-radius: 0 var(--border-radius) var(--border-radius) 0;
+        }
+
+        .feedback-title {
+            font-weight: 600;
+            color: var(--success);
+            margin-bottom: 8px;
+        }
+
+        .download-section {
+            text-align: center;
+            padding: 30px 0;
+        }
+
+        .download-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 30px 0;
+            color: var(--gray);
+            font-size: 0.95rem;
+            border-top: 1px solid var(--light-gray);
+            margin-top: 20px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            gap: 20px;
+            min-height: 300px;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 5px solid rgba(67, 97, 238, 0.2);
+            border-top: 5px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .api-status {
+            background: rgba(76, 201, 240, 0.1);
+            border-radius: var(--border-radius);
+            padding: 15px;
+            margin: 20px 0;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .api-status.connected {
+            border-left: 4px solid var(--success);
+        }
+
+        .api-status.disconnected {
+            border-left: 4px solid var(--danger);
+        }
+
+        @media (max-width: 768px) {
+            .process-steps {
+                flex-direction: column;
+                align-items: center;
+                gap: 40px;
+            }
+            
+            .progress-bar {
+                display: none;
+            }
+            
+            .card-container {
+                padding: 25px;
+            }
+            
+            h1 {
+                font-size: 2.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <h1>AI面试助手</h1>
+            </div>
+            <p class="subtitle">智能简历分析、面试模拟与报告生成，助您轻松应对任何面试挑战</p>
+            <div class="api-status connected" id="apiStatus">
+                <i class="fas fa-check-circle"></i> 已连接到后端API服务
+            </div>
+        </header>
+
+        <!-- 流程步骤指示器 -->
+        <div class="process-steps">
+            <div class="step active" id="step1">
+                <div class="step-icon">
+                    <i class="fas fa-file-upload"></i>
+                </div>
+                <div class="step-text">上传简历</div>
+            </div>
+            <div class="step" id="step2">
+                <div class="step-icon">
+                    <i class="fas fa-comments"></i>
+                </div>
+                <div class="step-text">面试过程</div>
+            </div>
+            <div class="step" id="step3">
+                <div class="step-icon">
+                    <i class="fas fa-file-download"></i>
+                </div>
+                <div class="step-text">报告下载</div>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+
+        <!-- 简历上传卡片 -->
+        <div class="card-container" id="uploadCard">
+            <div class="card-header">
+                <div class="card-icon">
+                    <i class="fas fa-file-upload"></i>
+                </div>
+                <h2 class="card-title">上传简历与职位要求</h2>
+            </div>
+            <div class="card-content">
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                    </div>
+                    <p class="upload-text">拖放您的简历文件到此处或 <strong>点击上传</strong></p>
+                    <p class="upload-text">支持PDF格式，最大10MB</p>
+                    <input type="file" id="resumeFile" class="file-input" accept=".pdf">
+                    <button class="btn" id="uploadBtn">选择简历文件</button>
+                </div>
+
+                <div class="form-group">
+                    <label for="jobDescription">职位描述与要求</label>
+                    <textarea class="form-control" id="jobDescription" placeholder="粘贴职位描述和要求..."></textarea>
+                </div>
+
+                <button class="btn btn-block btn-secondary" id="startAnalysisBtn" disabled>
+                    <i class="fas fa-cogs"></i> 开始分析简历与职位匹配度
+                </button>
+            </div>
+        </div>
+
+        <!-- 面试过程卡片 -->
+        <div class="card-container hidden" id="interviewCard">
+            <div class="card-header">
+                <div class="card-icon">
+                    <i class="fas fa-comments"></i>
+                </div>
+                <h2 class="card-title">AI模拟面试</h2>
+            </div>
+            <div class="card-content">
+                <div class="interview-container" id="interviewContainer">
+                    <div class="loading" id="interviewLoading">
+                        <div class="spinner"></div>
+                        <p>AI面试官正在准备问题，请稍候...</p>
+                    </div>
+                    <div id="questionsArea" class="hidden"></div>
+                </div>
+                
+                <button class="btn btn-block" id="nextQuestionBtn" disabled>
+                    <i class="fas fa-arrow-right"></i> 下一题
+                </button>
+                
+                <button class="btn btn-block btn-secondary hidden" id="finishInterviewBtn">
+                    <i class="fas fa-flag-checkered"></i> 完成面试并生成报告
+                </button>
+            </div>
+        </div>
+
+        <!-- 报告下载卡片 -->
+        <div class="card-container hidden" id="reportCard">
+            <div class="card-header">
+                <div class="card-icon">
+                    <i class="fas fa-file-download"></i>
+                </div>
+                <h2 class="card-title">面试报告生成</h2>
+            </div>
+            <div class="card-content">
+                <div class="loading" id="reportLoading">
+                    <div class="spinner"></div>
+                    <p>正在生成您的面试报告，请稍候...</p>
+                </div>
+                
+                <div class="report-content hidden" id="reportContent">
+                    <div class="report-title">AI面试评估报告</div>
+                    
+                    <div class="report-item">
+                        <div class="report-question">1. 请介绍一下您在前端开发方面的经验？</div>
+                        <div class="report-answer">我有5年前端开发经验，主要使用React和Vue框架，参与过多个大型项目开发。</div>
+                        <div class="report-feedback">
+                            <div class="feedback-title">AI评估：</div>
+                            <p>回答内容充分展示了相关经验，但可以更具体地说明项目规模和贡献。</p>
+                        </div>
+                    </div>
+                    
+                    <div class="report-item">
+                        <div class="report-question">2. 您如何处理与UI设计师的意见分歧？</div>
+                        <div class="report-answer">我会从技术实现角度解释问题，同时理解设计意图，寻找双方都能接受的解决方案。</div>
+                        <div class="report-feedback">
+                            <div class="feedback-title">AI评估：</div>
+                            <p>很好的协作态度，建议补充一个具体案例来增强说服力。</p>
+                        </div>
+                    </div>
+                    
+                    <div class="report-item">
+                        <div class="report-question">3. 请解释一下React Hooks的工作原理？</div>
+                        <div class="report-answer">React Hooks允许在函数组件中使用状态和其他React特性。主要Hooks包括useState、useEffect等。</div>
+                        <div class="report-feedback">
+                            <div class="feedback-title">AI评估：</div>
+                            <p>回答正确但不够深入，可以补充Hooks解决的问题和具体使用场景。</p>
+                        </div>
+                    </div>
+                    
+                    <div class="report-item">
+                        <div class="report-question">4. 您如何优化前端性能？</div>
+                        <div class="report-answer">我会使用代码分割、懒加载、资源压缩、CDN加速等方法优化性能。</div>
+                        <div class="report-feedback">
+                            <div class="feedback-title">AI评估：</div>
+                            <p>提到了关键优化点，建议补充具体工具（如Webpack）和量化效果。</p>
+                        </div>
+                    </div>
+                    
+                    <div class="report-item">
+                        <div class="report-question">5. 为什么选择我们公司？</div>
+                        <div class="report-answer">贵公司在行业内有很好的声誉，技术栈与我匹配，且重视员工成长。</div>
+                        <div class="report-feedback">
+                            <div class="feedback-title">AI评估：</div>
+                            <p>回答合理，建议更具体地提及公司特点和个人职业发展的契合点。</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="download-section hidden" id="downloadSection">
+                    <button class="btn btn-secondary download-btn" id="downloadReportBtn">
+                        <i class="fas fa-download"></i> 下载面试报告 (PDF)
+                    </button>
+                    <p style="margin-top: 20px; color: var(--gray);">报告已生成，点击上方按钮下载PDF文件</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>© 2025 AI面试助手 | 智能面试解决方案 | 隐私政策 | 使用条款</p>
+        </div>
+    </div>
+
+    <script>
+        // DOM元素
+        const uploadArea = document.getElementById('uploadArea');
+        const resumeFile = document.getElementById('resumeFile');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const startAnalysisBtn = document.getElementById('startAnalysisBtn');
+        const jobDescription = document.getElementById('jobDescription');
+        const progressFill = document.getElementById('progressFill');
+        
+        const interviewCard = document.getElementById('interviewCard');
+        const interviewContainer = document.getElementById('interviewContainer');
+        const interviewLoading = document.getElementById('interviewLoading');
+        const questionsArea = document.getElementById('questionsArea');
+        const nextQuestionBtn = document.getElementById('nextQuestionBtn');
+        const finishInterviewBtn = document.getElementById('finishInterviewBtn');
+        
+        const reportCard = document.getElementById('reportCard');
+        const reportLoading = document.getElementById('reportLoading');
+        const reportContent = document.getElementById('reportContent');
+        const downloadSection = document.getElementById('downloadSection');
+        const downloadReportBtn = document.getElementById('downloadReportBtn');
+        
+        // 步骤元素
+        const step1 = document.getElementById('step1');
+        const step2 = document.getElementById('step2');
+        const step3 = document.getElementById('step3');
+        const apiStatus = document.getElementById('apiStatus');
+        
+        // 状态变量
+        let currentStep = 1;
+        let currentQuestion = 0;
+        const questions = [
+            "请介绍一下您在前端开发方面的经验？",
+            "您如何处理与UI设计师的意见分歧？",
+            "请解释一下React Hooks的工作原理？",
+            "您如何优化前端性能？",
+            "为什么选择我们公司？"
+        ];
+        
+        // 事件监听器
+        uploadBtn.addEventListener('click', () => {
+            resumeFile.click();
+        });
+
+        resumeFile.addEventListener('change', handleFileUpload);
+        jobDescription.addEventListener('input', validateForm);
+        uploadArea.addEventListener('dragover', handleDragOver);
+        uploadArea.addEventListener('dragleave', handleDragLeave);
+        uploadArea.addEventListener('drop', handleDrop);
+        startAnalysisBtn.addEventListener('click', startAnalysis);
+        nextQuestionBtn.addEventListener('click', showNextQuestion);
+        finishInterviewBtn.addEventListener('click', finishInterview);
+        downloadReportBtn.addEventListener('click', downloadReport);
+        
+        // 处理文件上传
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (file && file.type === 'application/pdf') {
+                uploadFile(file);
+            } else {
+                alert('请上传PDF格式的简历文件');
+            }
+        }
+        
+        // 验证表单
+        function validateForm() {
+            if (resumeFile.files.length > 0 && jobDescription.value.trim() !== '') {
+                startAnalysisBtn.disabled = false;
+            } else {
+                startAnalysisBtn.disabled = true;
+            }
+        }
+        
+        // 拖放处理函数
+        function handleDragOver(e) {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        }
+
+        function handleDragLeave() {
+            uploadArea.classList.remove('dragover');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            
+            const file = e.dataTransfer.files[0];
+            if (file && file.type === 'application/pdf') {
+                resumeFile.files = e.dataTransfer.files;
+                uploadFile(file);
+            } else {
+                alert('请上传PDF格式的简历文件');
+            }
+        }
+        
+        // 模拟文件上传
+        function uploadFile(file) {
+            uploadArea.innerHTML = `
+                <div class="upload-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <p class="upload-text">简历已上传</p>
+                <p class="upload-text"><strong>${file.name}</strong></p>
+                <button class="btn btn-outline" id="changeFileBtn">更换文件</button>
+            `;
+            
+            document.getElementById('changeFileBtn').addEventListener('click', () => {
+                resumeFile.click();
+            });
+            
+            validateForm();
+        }
+        
+        // 开始分析 - 与后端API交互
+        function startAnalysis() {
+            startAnalysisBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 分析中...';
+            startAnalysisBtn.disabled = true;
+            
+            // 创建FormData对象
+            const formData = new FormData();
+            formData.append('resume', resumeFile.files[0]);
+            formData.append('job_description', jobDescription.value);
+            
+            // 向后端发送请求
+            fetch('/api/analyze', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // 更新进度条
+                    progressFill.style.width = '33%';
+                    
+                    // 进入下一步
+                    currentStep = 2;
+                    updateStepUI();
+                    
+                    // 显示面试卡片
+                    document.getElementById('uploadCard').classList.add('hidden');
+                    interviewCard.classList.remove('hidden');
+                    
+                    // 开始面试
+                    startInterview();
+                } else {
+                    alert('分析失败: ' + data.message);
+                    startAnalysisBtn.innerHTML = '<i class="fas fa-cogs"></i> 开始分析简历与职位匹配度';
+                    startAnalysisBtn.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('API请求错误:', error);
+                alert('连接服务器失败，请稍后重试');
+                startAnalysisBtn.innerHTML = '<i class="fas fa-cogs"></i> 开始分析简历与职位匹配度';
+                startAnalysisBtn.disabled = false;
+            });
+        }
+        
+        // 更新步骤UI
+        function updateStepUI() {
+            // 更新步骤状态
+            step1.classList.remove('active');
+            step2.classList.remove('active');
+            step3.classList.remove('active');
+            step1.classList.remove('completed');
+            step2.classList.remove('completed');
+            step3.classList.remove('completed');
+            
+            if (currentStep >= 1) step1.classList.add('completed');
+            if (currentStep >= 2) step2.classList.add('active');
+            if (currentStep >= 3) {
+                step2.classList.add('completed');
+                step3.classList.add('active');
+                progressFill.style.width = '100%';
+            } else if (currentStep >= 2) {
+                progressFill.style.width = '66%';
+            }
+        }
+        
+        // 开始面试 - 与后端API交互
+        function startInterview() {
+            // 显示加载状态
+            interviewLoading.classList.remove('hidden');
+            questionsArea.classList.add('hidden');
+            nextQuestionBtn.disabled = true;
+            finishInterviewBtn.classList.add('hidden');
+            
+            // 向后端请求面试问题
+            fetch('/api/generate-questions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    resume_id: 'res_12345',
+                    job_id: 'job_67890'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.questions && data.questions.length > 0) {
+                    // 使用从API获取的问题
+                    questions = data.questions;
+                    
+                    interviewLoading.classList.add('hidden');
+                    questionsArea.classList.remove('hidden');
+                    showQuestion(currentQuestion);
+                } else {
+                    alert('获取面试问题失败: ' + data.message);
+                    // 回退到默认问题
+                    interviewLoading.classList.add('hidden');
+                    questionsArea.classList.remove('hidden');
+                    showQuestion(currentQuestion);
+                }
+            })
+            .catch(error => {
+                console.error('API请求错误:', error);
+                alert('获取面试问题失败，使用默认问题');
+                // 回退到默认问题
+                interviewLoading.classList.add('hidden');
+                questionsArea.classList.remove('hidden');
+                showQuestion(currentQuestion);
+            });
+        }
+        
+        // 显示问题
+        function showQuestion(index) {
+            questionsArea.innerHTML = '';
+            
+            for (let i = 0; i <= index; i++) {
+                const questionCard = document.createElement('div');
+                questionCard.className = 'question-card';
+                questionCard.innerHTML = `
+                    <div class="question-header">
+                        <div class="question-icon">${i + 1}</div>
+                        <div class="question-text">${questions[i]}</div>
+                    </div>
+                    <div class="answer-area">
+                        <textarea class="form-control" id="answer-${i}" placeholder="请输入您的回答..." ${i < index ? 'disabled' : ''}></textarea>
+                    </div>
+                `;
+                questionsArea.appendChild(questionCard);
+            }
+            
+            if (index < questions.length - 1) {
+                nextQuestionBtn.disabled = false;
+                finishInterviewBtn.classList.add('hidden');
+            } else {
+                nextQuestionBtn.disabled = true;
+                finishInterviewBtn.classList.remove('hidden');
+            }
+            
+            // 滚动到最新问题
+            questionsArea.lastElementChild.scrollIntoView({behavior: 'smooth'});
+        }
+        
+        // 显示下一题
+        function showNextQuestion() {
+            // 保存当前问题的答案
+            const answer = document.getElementById(`answer-${currentQuestion}`).value;
+            
+            // 向后端提交答案
+            fetch('/api/submit-answer', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    question_index: currentQuestion,
+                    answer: answer,
+                    interview_id: 'int_12345'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    currentQuestion++;
+                    if (currentQuestion < questions.length) {
+                        nextQuestionBtn.disabled = true;
+                        showQuestion(currentQuestion);
+                    }
+                } else {
+                    alert('提交答案失败: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('API请求错误:', error);
+                alert('提交答案失败，请检查网络连接');
+            });
+        }
+        
+        // 完成面试 - 与后端API交互
+        function finishInterview() {
+            // 保存最后一个问题的答案
+            const answer = document.getElementById(`answer-${currentQuestion}`).value;
+            
+            fetch('/api/submit-answer', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    question_index: currentQuestion,
+                    answer: answer,
+                    interview_id: 'int_12345'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // 进入报告步骤
+                    currentStep = 3;
+                    updateStepUI();
+                    
+                    // 显示报告卡片
+                    interviewCard.classList.add('hidden');
+                    reportCard.classList.remove('hidden');
+                    
+                    // 生成报告
+                    generateReport();
+                } else {
+                    alert('提交答案失败: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('API请求错误:', error);
+                alert('提交答案失败，请检查网络连接');
+            });
+        }
+        
+        // 生成报告 - 与后端API交互
+        function generateReport() {
+            // 向后端请求生成报告
+            fetch('/api/generate-report', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    interview_id: 'int_12345'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    reportLoading.classList.add('hidden');
+                    reportContent.classList.remove('hidden');
+                    downloadSection.classList.remove('hidden');
+                } else {
+                    alert('生成报告失败: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('API请求错误:', error);
+                alert('生成报告失败，请稍后重试');
+            });
+        }
+        
+        // 下载报告 - 与后端API交互
+        function downloadReport() {
+            downloadReportBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 生成PDF中...';
+            downloadReportBtn.disabled = true;
+            
+            // 模拟API调用下载报告
+            fetch('/api/download-report/report_12345')
+            .then(response => {
+                if (response.ok) {
+                    return response.blob();
+                }
+                throw new Error('报告下载失败');
+            })
+            .then(blob => {
+                // 创建下载链接
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'AI面试报告.pdf';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                
+                downloadReportBtn.innerHTML = '<i class="fas fa-download"></i> 下载面试报告 (PDF)';
+                downloadReportBtn.disabled = false;
+            })
+            .catch(error => {
+                console.error('下载报告失败:', error);
+                alert('下载报告失败，请稍后重试');
+                downloadReportBtn.innerHTML = '<i class="fas fa-download"></i> 下载面试报告 (PDF)';
+                downloadReportBtn.disabled = false;
+            });
+        }
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            updateStepUI();
+            
+            // 检查API连接状态
+            fetch('/api/status')
+            .then(response => {
+                if (response.ok) {
+                    apiStatus.classList.add('connected');
+                    apiStatus.innerHTML = '<i class="fas fa-check-circle"></i> 已连接到后端API服务';
+                } else {
+                    apiStatus.classList.add('disconnected');
+                    apiStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i> 后端API服务连接失败';
+                }
+            })
+            .catch(() => {
+                apiStatus.classList.add('disconnected');
+                apiStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i> 后端API服务连接失败';
+            });
+        });
+    </script>
+</body>
+</html>
