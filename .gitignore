@@ -1,3 +1,3 @@
-key.env
+.env
 uploads/
 backend/__pycache__/
