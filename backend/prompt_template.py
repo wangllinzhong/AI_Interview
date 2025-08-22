@@ -1,8 +1,9 @@
-from langchain.prompts import ChatPromptTemplate, PromptTemplate
+from langchain.prompts import ChatPromptTemplate, PromptTemplate, SystemMessagePromptTemplate
 from langchain_core.prompts import MessagesPlaceholder
+from langchain_core.messages import SystemMessage, HumanMessage
 
 
-class InteviewPromptTemplate:
+class InterviewPromptTemplate:
     def __init__(self):
         # 处理简历提示词模板
         self.analyze_template = ""
@@ -10,7 +11,7 @@ class InteviewPromptTemplate:
         self.requirement_template = ""
         # 面试问答提示词模板
         self.chat_template = ""
-    
+
     @property
     def analyze_prompt(self):
         analyze_template = """
@@ -82,34 +83,36 @@ class InteviewPromptTemplate:
     @property
     def chat_template(self):
         chat_template = """
-        你是一名资深技术面试官，请基于当前关键词和历史对话生成问题：  
-
-        **当前可提问关键词**：  
-        {{target_keyword}}  
-        
-        **历史记录**）：  
-        # {{history_records}}  
-        
-        **提问规则**：  
-        1. **深度递进**：  
-           - 若关键词首次出现 → 考察基础理解（例：“解释{{关键词}}的核心原理”）  
-           - 若已有基础回答 → 升级到应用场景（例：“如何在项目中优化{{关键词}}的性能？”）  
-           - 若有实战讨论 → 深入扩展挑战（例：“{{关键词}}在千万级QPS下可能遇到什么瓶颈？”）  
-        2. **避免重复**：确保问题与历史记录中最近3轮不重复  
-        3. **难度适配**：  
-           - 高优先级关键词：设计含场景模拟的开放性问题  
-           - 中低优先级：聚焦具体技术细节或对比分析  
-        
-        **输出示例**：  
-        “你在简历中提到使用过{{关键词}}，请设计一个高并发场景下基于该技术的解决方案，并说明可能的风险点。”
+            你是一名资深技术面试官，请基于当前关键词和历史对话生成对应的问题和答案：  
+    
+            **当前可提问关键词**：  
+            {target_keyword}
+            
+            
+            **提问规则**：  
+            1. **问题可用**：
+               - 问题必须与当前关键词相关，且能被应聘者回答
+               - 问题是真实存在的面试问题或八股文，有提问的价值
+            2. **深度递进**：  
+               - 若关键词首次出现 → 考察基础理解
+               - 若已有基础回答 → 升级到应用场景
+               - 若有实战讨论 → 深入扩展挑战
+            3. **避免重复**：你作为面试官代表的是内存历史记录中的HumanMessage对象，生成的问题不能已经作为对象存储于内存历史中。
+            4. **难度适配**：  
+               - 高优先级关键词：设计含场景模拟的开放性问题  
+               - 中低优先级：聚焦具体技术细节或对比分析  
+            5. **提问选择**：应聘者存在不会的情况，可以选择换一个问题
+            
+            **输出规则**：  
+            1. **输出格式**：输出格式必须是严格的JSON格式，可被json.loads解析，不添加任何额外文本
+            2. **问题格式**：问题必须有对应的正确答案，不能凭空生成
+            **输出示例**：
+            {{
+                "question": "您的问题内容？",
+                "answer": "对应的正确答案"
+            }}
         """
-        return ChatPromptTemplate([
-            ("system", chat_template),
-            ("human", "你好，我是今天的应聘者小王。"),
-            ("user", "你好，小王。我是你的面试官小易。"),
-            ("human", "请根据我输出示例，帮我生成面试问题向我提出一个问题吧！"),
-            MessagesPlaceholder(variable_name = "agent_scratchpad")
-        ])
+        return chat_template
 
     @chat_template.setter
     def chat_template(self, template):

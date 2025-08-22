@@ -794,6 +794,7 @@
         // 状态变量
         let currentStep = 1;
         let interviewId = null;
+        let new_interviewId = null;
         let interviewHistoryData = [];
         let currentQuestion = null;
 
@@ -1049,6 +1050,9 @@
                 const data = await response.json();
 
                 if (data.success) {
+                    // 接收生成的报告的id
+                    new_interviewId = data.report_id
+
                     // 进入报告步骤
                     currentStep = 3;
                     updateStepUI();
@@ -1072,7 +1076,7 @@
         // 生成报告
         async function generateReport() {
             try {
-                const response = await fetch(`/api/get-report/${interviewId}`);
+                const response = await fetch(`/api/get-report/${new_interviewId}`);
 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);

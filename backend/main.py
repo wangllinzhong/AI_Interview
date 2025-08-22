@@ -4,15 +4,21 @@ from pathlib import Path
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
-from chat import MasterChat, InterviewChat
+from langchain_core.messages import HumanMessage
+
+from agent import AgentMasterChat
+from chain import ChainMasterChat
 import uuid
 import shutil
 from datetime import datetime
 import config
 import uvicorn
 
-chat = MasterChat()
+chat = ChainMasterChat()
 app = FastAPI(title="AI面试助手", description="智能面试解决方案")
+# 模拟数据库存储
+interviews_db = {}
+reports_db = {}
 
 # 创建必要的目录
 os.makedirs(config.UPLOAD_DIR, exist_ok=True)
@@ -20,10 +26,6 @@ os.makedirs(config.REPORT_DIR, exist_ok=True)
 
 # 挂载静态文件
 # app.mount("/frontend", StaticFiles(directory="../frontend"), name="frontend")
-
-# 模拟数据库存储
-interviews_db = {}
-reports_db = {}
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -49,14 +51,17 @@ async def start_interview(resume: UploadFile = File(...), job_description: str =
         "status": "analyzed"
     }
     interviews = interviews_db[interview_id]
-    questions = generate_sample_questions(interviews)
+    chat.analyze_resume(interviews)
+    chat.init_prompt(interviews)
+    chat.init_chain()
+    questions = chat.run_chain("向我提问吧！")
     # interviews_db[interview_id]["questions"] = questions['output']
     # interviews_db[interview_id]["status"] = "questions_generated"
-    print(questions['output'])
+    print(questions['text'])
     return JSONResponse({
         "success": True,
         "interview_id": interview_id,
-        "first_question": questions['output']
+        "first_question": questions['input']
     })
 
 
@@ -65,21 +70,25 @@ async def submit_answer(request: dict):
     """提交面试问题的答案"""
     interview_id = request.get("interview_id")
     question = request.get("question")
-    answer = request.get("answer")
-    print(interview_id, question, answer)
+    reply = request.get("answer")
+    print(interview_id, question, reply)
     """提交面试问题的答案"""
     if interview_id not in interviews_db:
         raise HTTPException(status_code=404, detail="面试记录不存在")
 
-    interviews = interviews_db[interview_id]
+    # interviews = interviews_db[interview_id]
     print(interview_id)
-    questions = chat.run(interviews['new_interview_keywords']['priority_keywords'])
+    questions = chat.run_chain(user_reply=reply)
+    # 判断问题出的是否重复
+    if any(msg.content == questions.get("input", "") for msg in questions['chat_history']
+           if isinstance(questions['chat_history'][0], HumanMessage)):
+        questions['finished'] = True
 
     return JSONResponse({
         "success": True,
         "interview_id": interview_id,
-        "next_question": questions['output'],
-        "finished": False
+        "next_question": questions['input'],
+        "finished": questions['finished']
     })
 
 
@@ -114,7 +123,7 @@ async def finish_interview(request: dict):
 
         # 在实际应用中，这里会生成真实的PDF报告
         # 现在我们只是创建一个空文件作为示例
-        Path(report_path).touch()
+        report = chat.make_pdf(report_path, report_id)
 
         # 存储报告信息
         reports_db[report_id] = {
@@ -129,7 +138,8 @@ async def finish_interview(request: dict):
         return JSONResponse({
             "success": True,
             "message": "面试已完成，报告生成中",
-            "report_id": report_id
+            "report_id": report_id,
+            "report": report
         })
 
     except Exception as e:
@@ -153,8 +163,8 @@ async def get_report(report_id: str):
         return JSONResponse({
             "success": True,
             "report": {
-                "questions": report_content.get("questions", []),
-                "overall_feedback": report_content.get("overall_feedback", "")
+                "questions": report_content,
+                "overall_feedback": report_content
             }
         })
 
@@ -182,17 +192,6 @@ async def websocket_endpoint(websocket: WebSocket):
             await websocket.send_text(f"Message text was: {data}")
     except WebSocketDisconnect:
         print("WebSocket disconnected")
-
-
-def generate_sample_questions(interviews: dict) -> list:
-    """根据职位描述生成示例问题"""
-    # 在实际应用中，这里会调用AI模型生成问题
-    # 现在我们返回一些通用问题
-    interview_chat = InterviewChat()
-    interview_chat.analyze_resume(interviews)
-
-    result = chat.run(interviews['new_interview_keywords']['priority_keywords'])
-    return result
 
 
 if __name__ == "__main__":
