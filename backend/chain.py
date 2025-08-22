@@ -106,7 +106,7 @@ class ChainMasterChat():
         result = self.chain.invoke({"input": input})
         self.memory.chat_memory.messages[-2].additional_kwargs['input'] = input
         if user_reply:
-            self.memory.chat_memory.messages[-1].additional_kwargs['reply'] = user_reply
+            self.memory.chat_memory.messages[-3].additional_kwargs['reply'] = user_reply
         result['finished'] = False
         print("--------------------")
         print(self.memory.buffer)
@@ -160,7 +160,7 @@ class ChainMasterChat():
         result = chain.invoke({"interview": interview.load()[0].page_content})
         db['new_interview_keywords'] = result
 
-    def make_pdf(self, report_path: str, interview_id: str):
+    def make_pdf(self, report_path: str, interview_id: str) -> list:
         """
         读取chain的对话历史生成pdf
         """
@@ -186,6 +186,18 @@ class ChainMasterChat():
 
             # 获取样式
             styles = getSampleStyleSheet()
+            # 修改标题样式
+            styles['Title'].fontName = 'SimHei'
+            styles['Title'].fontSize = 16
+            styles['Title'].spaceAfter = 20
+            styles['Title'].alignment = 1  # 居中
+
+            # 修改一级标题样式
+            styles['Heading1'].fontName = 'SimHei'
+            styles['Heading1'].fontSize = 14
+            styles['Heading1'].spaceAfter = 12
+            styles['Heading1'].spaceBefore = 12
+
             styles.add(ParagraphStyle(
                 name='Custom',
                 parent=styles['Normal'],
@@ -215,6 +227,7 @@ class ChainMasterChat():
 
             # 构建PDF内容
             story = list()
+            str_chat_history = [dict() for i in range(len(chat_history)) if i % 2 == 1]
 
             # 添加标题
             story.append(Paragraph("面试报告", styles['Title']))
@@ -227,14 +240,20 @@ class ChainMasterChat():
 
             # 添加对话历史
             story.append(Paragraph("面试对话记录", styles['Heading1']))
-            for i, msg in enumerate(chat_history, 1):
+            for i, msg in enumerate(chat_history):
                 role = "面试官" if msg.type == "human" else "应聘者"
                 content = msg.content
 
                 if role == "面试官":
-                    story.append(Paragraph(f"{i}. 面试官：{content}", styles['Question']))
+                    story.append(Paragraph(f"{i // 2 + 1}. 面试官：{content}", styles['Question']))
+                    str_chat_history[i // 2].update({
+                        "question": msg.content, "ai": "暂无ai分析！"
+                    })
                 else:
-                    story.append(Paragraph(f"{i}. 应聘者：{content}", styles['Answer']))
+                    story.append(Paragraph(f"应聘者：{content}", styles['Answer']))
+                    str_chat_history[i // 2].update({
+                        "answer":msg.content, "reply": msg.additional_kwargs['reply']
+                    })
                 story.append(Spacer(1, 6))
 
             # 构建PDF
@@ -244,7 +263,7 @@ class ChainMasterChat():
         except Exception as e:
             print(f"生成PDF时出错: {str(e)}")
             raise
-        return story
+        return str_chat_history
 
 
 if __name__ == "__main__":

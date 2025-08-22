@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from typing import List, Dict
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
@@ -24,6 +25,7 @@ reports_db = {}
 os.makedirs(config.UPLOAD_DIR, exist_ok=True)
 os.makedirs(config.REPORT_DIR, exist_ok=True)
 
+
 # 挂载静态文件
 # app.mount("/frontend", StaticFiles(directory="../frontend"), name="frontend")
 
@@ -31,7 +33,7 @@ os.makedirs(config.REPORT_DIR, exist_ok=True)
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
     """主页面路由，返回前端HTML"""
-    with open("../frontend/index.html", "r", encoding="utf-8") as f:
+    with open("../frontend/index2.html", "r", encoding="utf-8") as f:
         html_content = f.read()
     return HTMLResponse(content=html_content, status_code=200)
 
@@ -79,6 +81,8 @@ async def submit_answer(request: dict):
     # interviews = interviews_db[interview_id]
     print(interview_id)
     questions = chat.run_chain(user_reply=reply)
+    # todo 临时增加一个回复，完善逻辑后删除
+    chat.memory.chat_memory.messages[-1].additional_kwargs['reply'] = reply
     # 判断问题出的是否重复
     if any(msg.content == questions.get("input", "") for msg in questions['chat_history']
            if isinstance(questions['chat_history'][0], HumanMessage)):
@@ -123,13 +127,14 @@ async def finish_interview(request: dict):
 
         # 在实际应用中，这里会生成真实的PDF报告
         # 现在我们只是创建一个空文件作为示例
-        report = chat.make_pdf(report_path, report_id)
+        chat_history: List[Dict[str, str]] = chat.make_pdf(report_path, report_id)
 
         # 存储报告信息
         reports_db[report_id] = {
             "interview_id": interview_id,
             "report_path": report_path,
-            "created_at": datetime.now().isoformat()
+            "created_at": datetime.now().isoformat(),
+            "conversation_history": chat_history
         }
 
         # 更新面试记录中的报告ID
@@ -139,37 +144,65 @@ async def finish_interview(request: dict):
             "success": True,
             "message": "面试已完成，报告生成中",
             "report_id": report_id,
-            "report": report
         })
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/get-report/{report_id}")
-async def get_report(report_id: str):
+@app.post("/api/get-report")
+async def get_report(request: dict):
     """获取面试报告"""
     try:
+        # 从请求体中获取report_id
+        report_id = request.get("new_interviewId")
+
         # 检查报告是否存在
         if report_id not in reports_db:
             raise HTTPException(status_code=404, detail="报告不存在")
 
         report_info = reports_db[report_id]
 
-        # 读取报告内容
-        with open(report_info["report_path"], "r", encoding="utf-8") as f:
-            report_content = f.read()
-
+        # 返回报告数据，包含对话历史和总体评价
         return JSONResponse({
             "success": True,
             "report": {
-                "questions": report_content,
-                "overall_feedback": report_content
+                "conversation_history": report_info.get("conversation_history", []),
+                "overall_feedback": "这是总体评价，根据实际面试表现生成"
             }
         })
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/download-report/{interview_id}")
+async def download_report(interview_id: str):
+    """
+    下载面试报告的PDF文件
+    """
+    try:
+        # 构建PDF文件路径
+        filename = f"{interview_id}.pdf"
+        filepath = os.path.join(config.REPORT_DIR, filename)
+
+        # 检查文件是否存在
+        if not os.path.exists(filepath):
+            raise HTTPException(status_code=404, detail="报告文件不存在")
+
+        # 使用FileResponse发送文件
+        return FileResponse(
+            filepath,
+            media_type='application/pdf',
+            filename=f"AI面试报告_{interview_id}.pdf"
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        # 记录错误日志
+        print(f"下载报告失败: {str(e)}")
+        raise HTTPException(status_code=500, detail="服务器内部错误")
 
 
 @app.get("/api/status")
