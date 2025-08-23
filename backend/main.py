@@ -39,17 +39,27 @@ async def read_root():
 
 
 @app.post("/api/start-interview")
-async def start_interview(resume: UploadFile = File(...), job_description: str = Form(...)):
+async def start_interview(
+        resume: UploadFile = File(None),  # 改为可选
+        job_description: str = Form(""),  # 改为默认空字符串
+        keywords: str = Form(""),  # 新增关键词参数
+        job_title: str = Form("")  # 新增岗位名称参数
+):
     """仅分析简历，不生成问题"""
     interview_id = str(uuid.uuid4())
-    file_location = f"{config.UPLOAD_DIR}/{interview_id}_{resume.filename}"
 
-    with open(file_location, "wb+") as file_object:
-        shutil.copyfileobj(resume.file, file_object)
+    # 检查是否有文件上传
+    file_location = None
+    if resume and resume.filename:
+        file_location = f"{config.UPLOAD_DIR}/{interview_id}_{resume.filename}"
+        with open(file_location, "wb+") as file_object:
+            shutil.copyfileobj(resume.file, file_object)
 
     interviews_db[interview_id] = {
         "file_location": file_location,
         "job_description": job_description,
+        "keywords": keywords,
+        "job_title": job_title,
         "status": "analyzed"
     }
     interviews = interviews_db[interview_id]

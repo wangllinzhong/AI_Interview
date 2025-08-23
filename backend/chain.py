@@ -149,16 +149,35 @@ class ChainMasterChat():
         """
         使用顺序连 分析简历 -> 生成问题
         """
-        interview = PyPDFLoader(db["file_location"])
         model = OpenAI(temperature=0, max_tokens=512)
+        keywords_out = []
+        interview_words_list, job_words_list, keywords_list = [], [], []
+        # 对简历进行提取关键词
+        if db["file_location"] is not  None:
+            interview = PyPDFLoader(db["file_location"])
 
-        chain = self.template.analyze_prompt | model
+            chain = self.template.analyze_prompt | model
+            interview_words = chain.invoke({"interview": interview.load()[0].page_content})
+            words_json = json.loads(interview_words)
+            interview_words_list = set([o for i in words_json.values() for o in i])
 
-        # 使用callbacks记录日志
-        # result = chain.invoke({"interview": interview.load()[0].page_content},
-        #                       config={"callbacks":[StdOutCallbackHandler(), file_handler]})
-        result = chain.invoke({"interview": interview.load()[0].page_content})
-        db['new_interview_keywords'] = result
+        if db['job_description'] is not "":
+            job_description = db['job_description']
+            chain = self.template.requirement_prompt | model
+            job_words = chain.invoke({"job_description": job_description})
+            words_json = json.loads(job_words)
+            job_words_list = set([o for i in words_json.values() for o in i])
+
+        if db['keywords'] is not "":
+            keywords_list = set(db['keywords'].split(",") if "," in db['keywords'] else db['keywords'].split("，"))
+
+        keywords_out.extend(keywords_list)
+        keywords_out.extend(job_words_list & interview_words_list)
+
+        keywords_out.extend(interview_words_list - job_words_list)
+        keywords_out.extend(job_words_list - interview_words_list)
+
+        db['new_interview_keywords'] = keywords_out
 
     def make_pdf(self, report_path: str, interview_id: str) -> list:
         """
