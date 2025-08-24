@@ -1,17 +1,22 @@
 import json
+import logging
 import os
 import config
 from datetime import datetime
 from typing import Dict, Any
 
 from dotenv import load_dotenv
-from langchain.chains import SequentialChain, LLMChain
+from langchain.chains import SequentialChain, LLMChain, ConversationChain
+from langchain.schema.runnable import RunnablePassthrough, RunnableLambda
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, HumanMessagePromptTemplate
 from langchain_core.messages import SystemMessage, AIMessage, HumanMessage
 from langchain_openai import OpenAI, ChatOpenAI
-from langchain.memory import ConversationBufferMemory
+from langchain.chat_models import init_chat_model
+from langchain.memory import ConversationBufferMemory, ConversationBufferWindowMemory
+
+from backend.utils import load_json
 from prompt_template import InterviewPromptTemplate
 
 from reportlab.lib.pagesizes import letter
@@ -35,11 +40,13 @@ class CustomLLMChain(LLMChain):
 
         # 修改输出结果
         modified_output = self.modify_output(result[self.output_key])
-
-        # 使用修改后的输出更新结果
-        inputs['input'] = modified_output['question']
-        result[self.output_key] = modified_output['answer']
-
+        try:
+            # 使用修改后的输出更新结果
+            inputs['input'] = modified_output['question']
+            result[self.output_key] = modified_output['answer']
+        except Exception as e:
+            logging.error(f"对话模型生成问题错误: {result}")
+            self.memory.chat_memory.messages[-1].additional_kwargs['state'] = True
         return result
 
     def modify_output(self, output: str) -> str:
@@ -48,7 +55,12 @@ class CustomLLMChain(LLMChain):
         您可以在这里实现任何您需要的输出处理逻辑
         """
         # 示例：在输出前添加前缀
-        return json.loads(output)
+        try:
+            json_data = load_json(output)
+            return json_data
+        except Exception as e:
+            logging.error(f"对话模型缺少关键词导致输出错误！！！{output}")
+            self.memory.chat_memory.messages[-1].additional_kwargs['state'] = True
 
 
 class ChainMasterChat():
@@ -57,18 +69,27 @@ class ChainMasterChat():
     """
 
     def __init__(self):
-        self.chat_model = ChatOpenAI(temperature=0, streaming=True)
+        self.chat_model = ChatOpenAI(temperature=0, streaming=True, model='gpt-4o-mini-2024-07-18', max_tokens=512)
+        self.model = OpenAI(temperature=0, max_tokens=512, model='gpt-3.5-turbo-instruct')
         self.template = InterviewPromptTemplate()
         self.MEMORY_KEY = "chat_history"
         # 移除tools，因为我们不需要工具调用
         self.tools = []
         self.prompt = None
         self.chain = None  # 改为chain
-        self.memory = ConversationBufferMemory(
+        self.analyze_chain = None
+        self.answer_chain = None
+        # self.memory = ConversationBufferMemory(
+        #     return_messages=True,
+        #     memory_key=self.MEMORY_KEY
+        # )
+        self.memory = ConversationBufferWindowMemory(
             return_messages=True,
             memory_key=self.MEMORY_KEY
         )
-        self.num = 0
+        self.analyze_chain_bad_num = 0
+        self.analyze_chain_num = 0
+        self.result = {'finished': False, "current_stage": "start"}
 
     def init_prompt(self, keywords: dict):
         """
@@ -91,42 +112,112 @@ class ChainMasterChat():
         """
         # 创建简单的chain
         # self.chain = self.prompt | self.chat_model | StrOutputParser()
-        # 创建链
+        # 用于对话
         self.chain = CustomLLMChain(
             llm=self.chat_model,
             prompt=self.prompt,
             memory=self.memory,
             verbose=True
         )
+        # 用于分析应聘者的回答情况
+        load_memory = self.memory.load_memory_variables({}).get('chat_history', [])
+        memory = RunnablePassthrough.assign(history=RunnableLambda(lambda x: load_memory))
+        self.analyze_chain = memory | self.template.answer_template | self.model
+        # 用于回答应聘者问题
+        # self.answer_chain = self.template.interview_template | self.chat_model | StrOutputParser
+        self.answer_chain = LLMChain(
+            llm=self.chat_model,
+            prompt=self.template.interview_template,
+            memory=self.memory,
+            verbose=True
+        )
 
-    def run_chain(self, input: str = "请继续提问！", user_reply: str = ""):
+    def run_chain(self, user_reply: str = "") -> dict:
         """
         运行聊天
         """
-        result = self.chain.invoke({"input": input})
-        self.memory.chat_memory.messages[-2].additional_kwargs['input'] = input
-        if user_reply:
+        # 控制面试状态
+        if self.result['current_stage'] == "asking":
+            chain_result = self.analyze_candidate_responses(user_reply)
+            self.result.update(chain_result)
+        print(self.result)
+        # 根据状态选择如何使用llm
+        if not self.result['finished'] and self.result['current_stage'] == "start":
+            chain_result = self.chain.invoke({"input": "请生成问题和答案吧！"})
+            self.memory.chat_memory.messages[-2].additional_kwargs['input'] = "请生成问题和答案吧！"
+            chain_result['current_stage'] = "asking"
+        elif not self.result['finished'] and self.result['current_stage'] == "asking":
+            chain_result = self.chain.invoke({"input": self.result['current']})
+            self.memory.chat_memory.messages[-2].additional_kwargs['input'] = self.result['current']
             self.memory.chat_memory.messages[-3].additional_kwargs['reply'] = user_reply
-        result['finished'] = False
+        elif not self.result['finished'] and self.result['current_stage'] == "replying":
+            if self.result['current'] == "我的提问结束了，请问你有什么想问我的吗？":
+                self.memory.chat_memory.messages[-1].additional_kwargs['reply'] = user_reply
+                self.result['input'] = self.result['current']
+                self.result['current'] = ""
+                return self.result
+            chain_result= self.answer_candidate_questions(user_reply)
+            self.result['input'] = chain_result['answer']
+        # 如果发生错误，则停止面试
+        if 'state' in self.memory.chat_memory.messages[-1].additional_kwargs:
+            self.memory.chat_memory.messages.pop()
+            self.memory.chat_memory.messages.pop()
+            self.memory.chat_memory.messages[-1].additional_kwargs['reply'] = user_reply
+            chain_result['input'] = "面试结束"
+            chain_result['finished'] = True
+        self.result.update(chain_result)
         print("--------------------")
         print(self.memory.buffer)
+        return self.result
+
+    def analyze_candidate_responses(self, user_reply: str = "", current_stage: str = "asking") -> dict:
+        """
+        1. 通过llm解析判断应聘者的回答适用于的场景（深入提问、换一个问题、结束提问、由ai回答问题、结束面试）
+        2. 对应聘者的回答进行ai打分、分析应聘者的回答
+        """
+        load_memory = self.memory.load_memory_variables({}).get('chat_history', [])
+        memory = RunnablePassthrough.assign(history=RunnableLambda(lambda x: load_memory))
+        self.analyze_chain.steps[0] = memory
+        result = self.analyze_chain.invoke({
+            "answer": user_reply,
+            "correct_answer": self.memory.chat_memory.messages[-1].content,
+            "current_stage": current_stage
+        })
+        result_result = load_json(result)
+        self.analyze_chain_num += 1
+        self.analyze_chain_bad_num = self.analyze_chain_bad_num + 1 if int(result_result['ai_scoring']) < 5 else self.analyze_chain_bad_num
+        if self.analyze_chain_bad_num >= 3 or self.analyze_chain_num >= 10:
+            result_result.update({"current": "我的提问结束了，请问你有什么想问我的吗？", "current_stage": "replying"})
+        if 'ai_scoring' in result_result:
+            self.memory.chat_memory.messages[-1].additional_kwargs['ai_scoring'] = result_result['ai_scoring']
+        if 'ai_comment' in result_result:
+            self.memory.chat_memory.messages[-1].additional_kwargs['ai_comment'] = result_result['ai_comment']
+        return result_result
+
+    def answer_candidate_questions(self, question:str = "我没有什么问题"):
+        """
+        回答应聘者问题
+        """
+        answer_result = self.answer_chain.invoke({"question": question})
+        print(answer_result)
+        result = load_json(answer_result['text'])
+        self.memory.chat_memory.messages[-1].content = result['answer']
         return result
 
-    def chain_analyze_resume(self, db: dict):
+    def sequential_chain_analyze_resume(self, db: dict):
         """
         使用顺序连 分析简历 -> 分析职位要求 -> 生成问题
         """
         interview = PyPDFLoader(db["file_location"])
-        model = OpenAI(temperature=0, max_tokens=512)
 
         interview_chain = LLMChain(
-            llm=model,
+            llm=self.model,
             prompt=self.template.analyze_prompt,
             output_key="resume_keywords_json",
             verbose=True
         )
         requirement_chain = LLMChain(
-            llm=model,
+            llm=self.model,
             prompt=self.template.requirement_prompt,
             output_key="priority_keywords",
             verbose=True
@@ -149,33 +240,38 @@ class ChainMasterChat():
         """
         使用顺序连 分析简历 -> 生成问题
         """
-        model = OpenAI(temperature=0, max_tokens=512)
         keywords_out = []
-        interview_words_list, job_words_list, keywords_list = [], [], []
+        interview_words_list, job_words_list, keywords_list, job_title_list = set(), set(), set(), set()
         # 对简历进行提取关键词
         if db["file_location"] is not  None:
             interview = PyPDFLoader(db["file_location"])
-
-            chain = self.template.analyze_prompt | model
-            interview_words = chain.invoke({"interview": interview.load()[0].page_content})
-            words_json = json.loads(interview_words)
+            interview_chain = self.template.analyze_prompt | self.model
+            interview_words = interview_chain.invoke({"interview": interview.load()[0].page_content})
+            words_json = load_json(interview_words)
             interview_words_list = set([o for i in words_json.values() for o in i])
 
-        if db['job_description'] is not "":
-            job_description = db['job_description']
-            chain = self.template.requirement_prompt | model
-            job_words = chain.invoke({"job_description": job_description})
-            words_json = json.loads(job_words)
+        if db['job_description'] != "":
+            description_chain = self.template.requirement_prompt | self.model
+            job_words = description_chain.invoke({"job_description": db['job_description']})
+            words_json = load_json(job_words)
             job_words_list = set([o for i in words_json.values() for o in i])
 
-        if db['keywords'] is not "":
+        if db['keywords'] != "":
             keywords_list = set(db['keywords'].split(",") if "," in db['keywords'] else db['keywords'].split("，"))
+
+        if db['job_title'] != "":
+            job_chain = self.template.general_template | self.model
+            job_words = job_chain.invoke({"job_title": db['job_title']})
+            words_json = load_json(job_words)
+            job_title_list = set([o for i in words_json.values() for o in i])
+
 
         keywords_out.extend(keywords_list)
         keywords_out.extend(job_words_list & interview_words_list)
-
         keywords_out.extend(interview_words_list - job_words_list)
+        keywords_out.extend(job_title_list)
         keywords_out.extend(job_words_list - interview_words_list)
+
 
         db['new_interview_keywords'] = keywords_out
 
@@ -265,14 +361,17 @@ class ChainMasterChat():
 
                 if role == "面试官":
                     story.append(Paragraph(f"{i // 2 + 1}. 面试官：{content}", styles['Question']))
-                    str_chat_history[i // 2].update({
-                        "question": msg.content, "ai": "暂无ai分析！"
-                    })
+                    str_chat_history[i // 2]["question"] = content
                 else:
                     story.append(Paragraph(f"应聘者：{content}", styles['Answer']))
-                    str_chat_history[i // 2].update({
-                        "answer":msg.content, "reply": msg.additional_kwargs['reply']
-                    })
+                    str_chat_history[i // 2]["answer"] = content
+
+                if msg.additional_kwargs.get("reply", "") == "":
+                    continue
+                ai = msg.additional_kwargs.get("ai_comment", "")
+                str_chat_history[i // 2]["ai"] = ai
+                str_chat_history[i // 2]["reply"] = msg.additional_kwargs.get("reply", "")
+                story.append(Paragraph(f"AI：{ai}", styles['Answer']))
                 story.append(Spacer(1, 6))
 
             # 构建PDF

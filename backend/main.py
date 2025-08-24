@@ -33,7 +33,7 @@ os.makedirs(config.REPORT_DIR, exist_ok=True)
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
     """主页面路由，返回前端HTML"""
-    with open("../frontend/index2.html", "r", encoding="utf-8") as f:
+    with open("../frontend/index.html", "r", encoding="utf-8") as f:
         html_content = f.read()
     return HTMLResponse(content=html_content, status_code=200)
 
@@ -60,13 +60,13 @@ async def start_interview(
         "job_description": job_description,
         "keywords": keywords,
         "job_title": job_title,
-        "status": "analyzed"
+        # "status": "analyzed"
     }
     interviews = interviews_db[interview_id]
     chat.analyze_resume(interviews)
     chat.init_prompt(interviews)
     chat.init_chain()
-    questions = chat.run_chain("向我提问吧！")
+    questions = chat.run_chain()
     # interviews_db[interview_id]["questions"] = questions['output']
     # interviews_db[interview_id]["status"] = "questions_generated"
     print(questions['text'])
@@ -92,10 +92,12 @@ async def submit_answer(request: dict):
     print(interview_id)
     questions = chat.run_chain(user_reply=reply)
     # todo 临时增加一个回复，完善逻辑后删除
-    chat.memory.chat_memory.messages[-1].additional_kwargs['reply'] = reply
+    # chat.memory.chat_memory.messages[-1].additional_kwargs['reply'] = reply
     # 判断问题出的是否重复
-    if any(msg.content == questions.get("input", "") for msg in questions['chat_history']
-           if isinstance(questions['chat_history'][0], HumanMessage)):
+    # if any(msg.content == questions.get("input", "") for msg in questions['chat_history']
+    #        if isinstance(questions['chat_history'][0], HumanMessage)):
+    #     questions['finished'] = True
+    if reply == "结束":
         questions['finished'] = True
 
     return JSONResponse({
