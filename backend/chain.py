@@ -136,6 +136,7 @@ class ChainMasterChat():
         """
         运行聊天
         """
+        chain_result = {}
         # 控制面试状态
         if self.result['current_stage'] == "asking":
             chain_result = self.analyze_candidate_responses(user_reply)
