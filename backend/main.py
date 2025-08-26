@@ -1,13 +1,9 @@
 import os
-from pathlib import Path
 from typing import List, Dict
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, WebSocket, WebSocketDisconnect
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
-from langchain_core.messages import HumanMessage
 
-from agent import AgentMasterChat
 from chain import ChainMasterChat
 import uuid
 import shutil
@@ -67,13 +63,11 @@ async def start_interview(
     chat.init_prompt(interviews)
     chat.init_chain()
     questions = chat.run_chain()
-    # interviews_db[interview_id]["questions"] = questions['output']
-    # interviews_db[interview_id]["status"] = "questions_generated"
-    print(questions['text'])
+    print(questions)
     return JSONResponse({
         "success": True,
         "interview_id": interview_id,
-        "first_question": questions['input']
+        "first_question": questions['human']
     })
 
 
@@ -91,19 +85,13 @@ async def submit_answer(request: dict):
     # interviews = interviews_db[interview_id]
     print(interview_id)
     questions = chat.run_chain(user_reply=reply)
-    # todo 临时增加一个回复，完善逻辑后删除
-    # chat.memory.chat_memory.messages[-1].additional_kwargs['reply'] = reply
-    # 判断问题出的是否重复
-    # if any(msg.content == questions.get("input", "") for msg in questions['chat_history']
-    #        if isinstance(questions['chat_history'][0], HumanMessage)):
-    #     questions['finished'] = True
     if reply == "结束":
         questions['finished'] = True
 
     return JSONResponse({
         "success": True,
         "interview_id": interview_id,
-        "next_question": questions['input'],
+        "next_question": questions['human'],
         "finished": questions['finished']
     })
 

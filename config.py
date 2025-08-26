@@ -3,7 +3,7 @@ import os
 # 基础配置
 DEBUG = os.getenv("DEBUG", "true").lower() == "true"
 HOST = os.getenv("HOST", "127.0.0.1")
-PORT = int(os.getenv("PORT", 8000))
+PORT = int(os.getenv("PORT", 8080))
 WORKERS = int(os.getenv("WORKERS", 1))
 
 # 文件存储配置

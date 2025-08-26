@@ -1,21 +1,16 @@
-import json
-import logging
 import os
 
 from dotenv import load_dotenv
-from langchain.agents import create_openai_tools_agent, AgentExecutor, initialize_agent, AgentType
+from langchain.agents import create_openai_tools_agent, AgentExecutor
 from langchain.chains import SequentialChain, LLMChain
 from langchain_community.document_loaders import PyPDFLoader
-from langchain_core.messages import HumanMessage
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.callbacks import StdOutCallbackHandler, FileCallbackHandler
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import SystemMessage
 from langchain_core.tools import Tool
 from langchain_openai import OpenAI, ChatOpenAI
 from langchain.memory import ConversationBufferMemory
-from tools import search_question
-from prompt_template import InterviewPromptTemplate
+from base.tools import search_question
+from base.prompt_template import InterviewPromptTemplate
 
 load_dotenv()
 os.environ["OPENAI_API_KEY"] = os.getenv("AZ_API_KEY")
