@@ -8,7 +8,7 @@ from langchain.chains import SequentialChain, LLMChain
 from langchain.schema.runnable import RunnablePassthrough, RunnableLambda
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, HumanMessagePromptTemplate
-from langchain_core.messages import SystemMessage, AIMessage
+from langchain_core.messages import SystemMessage, AIMessage, HumanMessage
 from langchain_openai import OpenAI, ChatOpenAI
 
 from base.struct_chain import CustomLLMChain
@@ -35,7 +35,8 @@ class ChainMasterChat:
         self.MEMORY_KEY = "chat_history"
         # 移除tools，因为我们不需要工具调用
         self.tools = []
-        self.prompt = None
+        self.chat_prompt = None
+        self.interview_prompt = None
         self.chain = None  # 改为chain
         self.analyze_chain = None
         self.answer_chain = None
@@ -58,13 +59,21 @@ class ChainMasterChat:
         """
         初始化提示词prompt
         """
+        # 面试官提问模板
         system_chat_template = self.template.chat_template.format(
             target_keyword=json.dumps(keywords['new_interview_keywords'], ensure_ascii=False)
         )
 
         # 构建正确的ChatPromptTemplate
-        self.prompt = ChatPromptTemplate.from_messages([
+        self.chat_prompt = ChatPromptTemplate.from_messages([
             SystemMessage(content=system_chat_template),
+            MessagesPlaceholder(variable_name="chat_history"),
+            HumanMessagePromptTemplate.from_template("{human}"),
+        ])
+
+        # 应聘者提问模板
+        self.interview_prompt = ChatPromptTemplate.from_messages([
+            SystemMessage(content=self.template.interview_template),
             MessagesPlaceholder(variable_name="chat_history"),
             HumanMessagePromptTemplate.from_template("{human}"),
         ])
@@ -74,24 +83,23 @@ class ChainMasterChat:
         初始化chain而不是agent
         """
         # 创建简单的chain
-        # self.chain = self.prompt | self.chat_model | StrOutputParser()
+        # self.chain = self.chat_prompt | self.chat_model | StrOutputParser()
         # 用于对话
         self.chain = CustomLLMChain(
             llm=self.chat_model,
-            prompt=self.prompt,
+            prompt=self.chat_prompt,
             memory=self.memory,
             # callbacks=self.callbacks,
             verbose=True
         )
         # 用于分析应聘者的回答情况
-        load_memory = self.memory.load_memory_variables({}).get('chat_history', [])
-        memory = RunnablePassthrough.assign(history=RunnableLambda(lambda x: load_memory))
+        memory = RunnablePassthrough.assign(history=RunnableLambda(lambda x: self.memory.buffer))
         self.analyze_chain = memory | self.template.answer_template | self.model
         # 用于回答应聘者问题
         # self.answer_chain = self.template.interview_template | self.chat_model | StrOutputParser
-        self.answer_chain = LLMChain(
+        self.answer_chain = CustomLLMChain(
             llm=self.chat_model,
-            prompt=self.template.interview_template,
+            prompt=self.interview_prompt,
             memory=self.memory,
             verbose=True
         )
@@ -116,15 +124,17 @@ class ChainMasterChat:
             self.chain_result.update(self.chain.invoke({"human": self.chain_result['current']}))
         elif not self.chain_result['finished'] and self.chain_result['current_stage'] == "replying":
             if self.chain_result['current'] == "我的提问结束了，请问你有什么想问我的吗？":
+                self.memory.chat_memory.messages.append(HumanMessage(content=self.chain_result['current']))
+                self.memory.full_history.append({'ai_output': self.chain_result['current'], 'human_input': ""})
                 self.chain_result['human'] = self.chain_result['current']
                 return self.chain_result
-            self.chain_result = self.answer_candidate_questions(self.chain_result['reply'])
+            self.chain_result = self.answer_candidate_questions(self.chain_result['current'])
+            print(self.chain_result)
         else:
             self.chain_result['ai'] = "面试结束"
             self.chain_result['finished'] = True
         print("--------------------")
         print(self.memory.full_history)
-        print(self.memory.buffer)
         return self.chain_result
 
     def analyze_candidate_responses(self) -> dict:
@@ -140,24 +150,28 @@ class ChainMasterChat:
             "current_stage": self.chain_result['current_stage']
         })
         result_result = load_json(result)
+        print(result_result)
         self.analyze_chain_num += 1
         self.analyze_chain_bad_num = self.analyze_chain_bad_num + 1 if int(
             result_result['ai_scoring']) < 55 else self.analyze_chain_bad_num
         if self.analyze_chain_bad_num >= 3 or self.analyze_chain_num >= 10:
             result_result.update({"current": "我的提问结束了，请问你有什么想问我的吗？", "current_stage": "replying"})
         if 'ai_scoring' in result_result:
-            self.memory.chat_memory.messages[-1].additional_kwargs['ai_scoring'] = result_result['ai_scoring']
+            # self.memory.chat_memory.messages[-1].additional_kwargs['ai_scoring'] = result_result['ai_scoring']
+            self.memory.full_history[-1].update({'ai_scoring': result_result['ai_scoring']})
         if 'ai_comment' in result_result:
-            self.memory.chat_memory.messages[-1].additional_kwargs['ai_comment'] = result_result['ai_comment']
+            # self.memory.chat_memory.messages[-1].additional_kwargs['ai_comment'] = result_result['ai_comment']
+            self.memory.full_history[-1].update({'ai_comment': result_result['ai_comment']})
+        self.memory.full_history[-1].update({'current_stage': result_result['current_stage']})
         return result_result
 
     def answer_candidate_questions(self, question: str = "我没有什么问题"):
         """
         回答应聘者问题
         """
-        answer_result = self.answer_chain.invoke({"question": question})
-        print(answer_result)
+        answer_result = self.answer_chain.invoke({"human": question})
         result = load_json(answer_result['text'])
+        result['ai'], result['human'] = result['human'], result['ai']
         return result
 
     def analyze_resume(self, db: dict):

@@ -86,6 +86,7 @@ async def submit_answer(request: dict):
     print(interview_id)
     questions = chat.run_chain(user_reply=reply)
     if reply == "结束":
+        questions['human'] = "今天的面试到此结束，期望下次再见。"
         questions['finished'] = True
 
     return JSONResponse({
@@ -127,7 +128,7 @@ async def finish_interview(request: dict):
 
         # 在实际应用中，这里会生成真实的PDF报告
         # 现在我们只是创建一个空文件作为示例
-        chat_history: List[Dict[str, str]] = chat.make_pdf(report_path, report_id)
+        chat_history: List[Dict[str, str]] = chat.memory.save_history(report_path, report_id)
 
         # 存储报告信息
         reports_db[report_id] = {
@@ -235,3 +236,13 @@ if __name__ == "__main__":
         # reload=config.DEBUG,
         # workers=config.WORKERS
     )
+    # try:
+    #     uvicorn.run(
+    #         "main:app",
+    #         host=config.HOST,
+    #         port=config.PORT,
+    #         # reload=config.DEBUG,
+    #         # workers=config.WORKERS
+    #     )
+    # except Exception as e:
+    #     chat.memory.clear()

@@ -436,13 +436,13 @@
             border-bottom: 1px solid var(--light-gray);
         }
 
-        .report-question {
+        .report-human_input {
             font-weight: 600;
             margin-bottom: 8px;
             color: var(--dark);
         }
 
-        .report-answer {
+        .report-ai_output {
             margin-bottom: 12px;
             padding-left: 15px;
             color: var(--gray);
@@ -756,7 +756,7 @@
             border-bottom: 1px solid var(--light-gray);
         }
 
-        .conversation-question {
+        .conversation-human_input {
             font-weight: 600;
             color: var(--primary);
             margin-bottom: 8px;
@@ -768,13 +768,13 @@
             color: var(--dark);
         }
 
-        .conversation-answer {
+        .conversation-ai_output {
             margin-bottom: 8px;
             padding-left: 15px;
             color: var(--success);
         }
 
-        .conversation-ai {
+        .conversation-ai_comment {
             background: rgba(76, 201, 240, 0.1);
             border-left: 3px solid var(--warning);
             padding: 10px;
@@ -1395,17 +1395,17 @@
                 report.conversation_history.forEach((item, index) => {
                     conversationHTML += `
                         <div class="conversation-item">
-                            <div class="conversation-question">
-                                <strong>面试官:</strong> ${item.question}
+                            <div class="conversation-human_input">
+                                <strong>面试官:</strong> ${item.human_input}
                             </div>
                             <div class="conversation-reply">
                                 <strong>应聘者:</strong> ${item.reply}
                             </div>
-                            <div class="conversation-answer">
-                                <strong>参考答案:</strong> ${item.answer}
+                            <div class="conversation-ai_output">
+                                <strong>参考答案:</strong> ${item.ai_output}
                             </div>
-                            <div class="conversation-ai">
-                                <strong>AI分析:</strong> ${item.ai}
+                            <div class="conversation-ai_comment">
+                                <strong>AI分析:</strong> ${item.ai_comment}
                             </div>
                         </div>
                     `;

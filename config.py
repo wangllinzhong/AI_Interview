@@ -7,7 +7,7 @@ PORT = int(os.getenv("PORT", 8080))
 WORKERS = int(os.getenv("WORKERS", 1))
 
 # 文件存储配置
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_DIR = os.path.join(BASE_DIR, "backend/static/uploads")
 REPORT_DIR = os.path.join(BASE_DIR, "backend/static/reports")
 TTF_FILE = os.path.join(BASE_DIR, "frontend/msyh.ttc")

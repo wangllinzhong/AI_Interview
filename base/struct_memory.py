@@ -37,9 +37,6 @@ class EnhanceConversationMemory(ConversationBufferMemory):
             pdfmetrics.registerFont(TTFont('微软雅黑', config.TTF_FILE))
             pdfmetrics.registerFont(TTFont('SimHei', 'SimHei.ttf'))
 
-            # 获取聊天历史
-            chat_history = self.memory.full_history
-
             # 创建PDF文档
             doc = SimpleDocTemplate(
                 path,
@@ -106,13 +103,16 @@ class EnhanceConversationMemory(ConversationBufferMemory):
             # 添加对话历史
             story.append(Paragraph("面试对话记录", styles['Heading1']))
             for i, msg in enumerate(self.full_history):
-                if msg['state'] in ['start', 'asking']:
-                    story.append(Paragraph(f"{i + 1}. 面试官：{msg['input']}", styles['Question']))
-                    story.append(Paragraph(f"应聘者：{msg['output']}", styles['Answer']))
-                    story.append(Paragraph(f"AI：{msg['ai']}", styles['Answer']))
+                if 'current_stage' in msg:
+                    story.append(Paragraph(f"{i + 1}. 面试官：{msg['human_input']}", styles['Question']))
+                    story.append(Paragraph(f"应聘者：{msg['reply']}", styles['Answer']))
+                    story.append(Paragraph(f"正确答案：{msg['ai_output']}", styles['Answer']))
+                    story.append(Paragraph(f"AI评价：{msg['ai_comment']}", styles['Answer']))
                 else:
-                    story.append(Paragraph(f"{i + 1}. 面试官：{msg['input']}", styles['Question']))
-                    story.append(Paragraph(f"应聘者：{msg['output']}", styles['Answer']))
+                    if msg['human_input'] != "":
+                        story.append(Paragraph(f"应聘者：{msg['human_input']}", styles['Answer']))
+                    if 'ai_output' != "":
+                        story.append(Paragraph(f"{i + 1}. 面试官：{msg['ai_output']}", styles['Question']))
                 story.append(Spacer(1, 6))
 
             # 构建PDF
@@ -122,6 +122,7 @@ class EnhanceConversationMemory(ConversationBufferMemory):
         except Exception as e:
             print(f"生成PDF时出错: {str(e)}")
             raise
+        return self.full_history
 
     @property
     def full_history(self):
