@@ -152,9 +152,6 @@ class ChainMasterChat:
             "current_stage": self.chain_result['current_stage']
         })
         result_result = load_json(result)
-        if 'ai_scoring' not in result_result:
-            result_result.update({"ai_scoring": 0})
-            self.analyze_chain_bad_num = 3
         print(result_result)
         self.analyze_chain_num += 1
         self.analyze_chain_bad_num = self.analyze_chain_bad_num + 1 if int(

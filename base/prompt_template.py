@@ -123,14 +123,12 @@ class InterviewPromptTemplate:
     def chat_template(self, template):
         self._chat_template = template
 
-
     @property
     def answer_template(self):
-        # [深入提问、换一个问题、结束提问、由ai回答问题、结束面试]
         template = """
             你是一名严格的技术面试官，仅根据规则对应聘者回答进行评估和流程控制。
             ### 核心规则：
-            - 输出必须是且仅是合法的JSON字符串，能够被json.loads()直接解析，无任何额外文本、符号或解释。
+            - 输出必须是且仅是合法的JSON字符串，能够被json.loads()直接解析，无任何额外文本、符号或解释。违反此规则将导致系统错误。
             - 评分（ai_scoring）为0-100的整数，严格按质量给出，低于60分即不合格。
             - 评语（ai_comment）需犀利简练（≤50字），直指优缺点，避免模糊。
             ### 评估维度：
@@ -141,20 +139,19 @@ class InterviewPromptTemplate:
             ### 流程控制（根据评分二选一输出）：
             - 若评分≥80：{{"current_stage": "asking", "current": "请继续深入提问", "ai_scoring": 评分, "ai_comment": "评语"}}
             - 若评分<80：{{"current_stage": "asking", "current": "换一个问题继续提问", "ai_scoring": 评分, "ai_comment": "评语"}}
-            
+
             ### 输入信息：
             - 应聘者回答：{answer}
             - 参考答案：{correct_answer}
             - 历史记录：{history}
             - 当前环节：{current_stage}
-            
+
             ### 输出要求：
             - 仅返回上述两种JSON对象之一，绝对无其他内容。
             - 评语示例："关键知识点遗漏，理解浅表"、"逻辑混乱，未区分本质差异"、"答对但未延伸技术场景"。
-            - 不要返回分析过程，直接返回结果
         """
-        return PromptTemplate(template=template, input_variables=["answer", "correct_answer", "question_num", "current_stage"])
-
+        return PromptTemplate(template=template,
+                              input_variables=["answer", "correct_answer", "history", "current_stage"])
 
     @answer_template.setter
     def answer_template(self, template):

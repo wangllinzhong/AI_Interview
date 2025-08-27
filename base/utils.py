@@ -13,3 +13,5 @@ def load_json(jsons: str):
         return json.loads(new_json)
     except Exception as e:
         logging.error(f"解析输出json数据错误：{jsons}")
+        print(jsons)
+        return {}
