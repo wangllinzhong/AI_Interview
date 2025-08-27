@@ -8,7 +8,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
-import config
+from backend import config
 
 
 class EnhanceConversationMemory(ConversationBufferMemory):
@@ -35,7 +35,7 @@ class EnhanceConversationMemory(ConversationBufferMemory):
             # 请确保系统中有SimHei.ttf或其他中文字体文件
             # 如果没有，可以从Windows系统复制或下载中文字体文件
             pdfmetrics.registerFont(TTFont('微软雅黑', config.TTF_FILE))
-            pdfmetrics.registerFont(TTFont('SimHei', 'SimHei.ttf'))
+            # pdfmetrics.registerFont(TTFont('SimHei', 'SimHei.ttf'))
 
             # 创建PDF文档
             doc = SimpleDocTemplate(
@@ -50,13 +50,13 @@ class EnhanceConversationMemory(ConversationBufferMemory):
             # 获取样式
             styles = getSampleStyleSheet()
             # 修改标题样式
-            styles['Title'].fontName = 'SimHei'
+            styles['Title'].fontName = '微软雅黑'
             styles['Title'].fontSize = 16
             styles['Title'].spaceAfter = 20
             styles['Title'].alignment = 1  # 居中
 
             # 修改一级标题样式
-            styles['Heading1'].fontName = 'SimHei'
+            styles['Heading1'].fontName = '微软雅黑'
             styles['Heading1'].fontSize = 14
             styles['Heading1'].spaceAfter = 12
             styles['Heading1'].spaceBefore = 12
@@ -64,7 +64,7 @@ class EnhanceConversationMemory(ConversationBufferMemory):
             styles.add(ParagraphStyle(
                 name='Custom',
                 parent=styles['Normal'],
-                fontName='SimHei',  # 使用中文字体
+                fontName='微软雅黑',  # 使用中文字体
                 fontSize=10,
                 spaceAfter=12,
                 alignment=1  # 居中
@@ -73,7 +73,7 @@ class EnhanceConversationMemory(ConversationBufferMemory):
             styles.add(ParagraphStyle(
                 name='Question',
                 parent=styles['Normal'],
-                fontName='SimHei',
+                fontName='微软雅黑',
                 fontSize=10,
                 spaceAfter=6,
                 leftIndent=20
@@ -82,7 +82,7 @@ class EnhanceConversationMemory(ConversationBufferMemory):
             styles.add(ParagraphStyle(
                 name='Answer',
                 parent=styles['Normal'],
-                fontName='SimHei',
+                fontName='微软雅黑',
                 fontSize=10,
                 spaceAfter=6,
                 leftIndent=40

@@ -1,29 +1,39 @@
-# 项目配置需求
-1. miniconda
-2. python 3.11.13
-3. conda install -r requirements.txt
-4. langchain_openai 无法用conda安装需要用pip子项安装
-5. dotenv 无法用conda安装需要用pip子项安装
+🤖 AI 面试官 - 下一代智能面试官系统
 
-# agent流程
-1. 用户输入简历（pdf）和面试岗位需求
-2. 服务器接口调用langchain，将简历和面试岗位需求作为输入，返回面试官提问的问题和答案
-    1. 解析面试岗位需求
-    2. 解析简历
-    3. 生成面试官提问的问题和答案（动态问题生成）
-3. 客户端接收问题，展示给面试人员提问
-4. 面试人员回答问题，客户端接收答案
-5. langchain通过Rule-based + LLM-based 决策机制，判断进一步提问、另起一个问题或提问结束
-    1. Rule-based：基于规则进行硬性条件过滤
-    2. LLM-based：基于语言模型进行软性条件过滤
-6. 面试结束后整理面试中的面试官问题、面试者回答和正确答案，生成面试报告（pdf）
+首个支持全流程技术面试的开源AI系统 | Fast API设计 | llm行为分析
 
-![alt text](deepseek_mermaid_20250818_97c866.png)
+🌟 为什么选择AI 面试官？
+开发者痛点
+😰 技术面试缺乏真实场景练习
+📚 传统刷题无法培养沟通表达能力
+⏳ 人工模拟面试成本高昂
+我们的优势
+✅ 轻量级架构 - Fast API，易于集成
+✅ 深度技术评估 - LLM评审双引擎
+✅ 多模态分析 - 未来（语音/代码/表情多维度评估）
 
+🚀 核心功能速览
+智能问答引擎	GPT-4技术概念考察
+语音交互系统	Fast API + 异步任务队列
 
-# 服务器接口 -> langchain -> deepseek
-# 客户端：面试官
-# 接口：http、https、websocket
+🛠️ 核心技术栈
+智能引擎: LangChain + OpenAI
 
-# 服务器
-1. 接口访问，python选择fastapi
+数据库: 未来（Redis）
+
+![img.png](frontend/img.png)
+
+![img_1.png](frontend/img_1.png)
+
+![img2.png](img2.png)
+
+⚡ 快速开始
+5分钟开启你的第一次AI面试：
+```
+# 1. 克隆仓库
+git@github.com:wangllinzhong/AI_Interview.git
+
+# 2. docker
+docker build -t ai-interview .
+docker run -p 8080:8080 -v ai-intreview-data:/AI-Interview/backend/static ai-interview
+```

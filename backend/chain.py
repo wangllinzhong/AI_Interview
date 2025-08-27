@@ -1,10 +1,7 @@
 import json
 import os
-import config
-from datetime import datetime
 
 from dotenv import load_dotenv
-from langchain.chains import SequentialChain, LLMChain
 from langchain.schema.runnable import RunnablePassthrough, RunnableLambda
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, HumanMessagePromptTemplate
@@ -20,6 +17,8 @@ from base.prompt_template import InterviewPromptTemplate
 load_dotenv()
 os.environ["OPENAI_API_KEY"] = os.getenv("AZ_API_KEY")
 os.environ["OPENAI_API_BASE"] = os.getenv("POLO_API_BASE")
+# os.environ["OPENAI_API_KEY"] = os.getenv("DEEPSEEK_API_KEY")
+# os.environ["OPENAI_API_BASE"] = os.getenv("DEEPSEEK_API_BASE")
 
 
 class ChainMasterChat:
@@ -30,6 +29,8 @@ class ChainMasterChat:
     def __init__(self):
         self.chat_model = ChatOpenAI(temperature=0, streaming=True, model='gpt-4o-mini-2024-07-18', max_tokens=512)
         self.model = OpenAI(temperature=0, max_tokens=512, model='gpt-3.5-turbo-instruct')
+        # self.chat_model = ChatOpenAI(temperature=0, model='deepseek-ai/DeepSeek-R1-0528-Qwen3-8B', max_tokens=512)
+        # self.model = OpenAI(temperature=0, max_tokens=512, model='deepseek-ai/DeepSeek-R1-0528-Qwen3-8B')
         self.template = InterviewPromptTemplate()
         self.callbacks = [HistoryCallback()]
         self.MEMORY_KEY = "chat_history"
@@ -51,6 +52,7 @@ class ChainMasterChat:
             output_key="ai",
             verbose=True
         )
+        self.memory.clear()
         self.analyze_chain_bad_num = 0
         self.analyze_chain_num = 0
         self.chain_result = {"finished": False, 'current_stage':  'start'}
@@ -150,6 +152,9 @@ class ChainMasterChat:
             "current_stage": self.chain_result['current_stage']
         })
         result_result = load_json(result)
+        if 'ai_scoring' not in result_result:
+            result_result.update({"ai_scoring": 0})
+            self.analyze_chain_bad_num = 3
         print(result_result)
         self.analyze_chain_num += 1
         self.analyze_chain_bad_num = self.analyze_chain_bad_num + 1 if int(

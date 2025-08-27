@@ -1,8 +1,19 @@
 import os
+import platform
+
+# 文件存储配置
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+UPLOAD_DIR = os.path.join(BASE_DIR, "static/uploads")
+REPORT_DIR = os.path.join(BASE_DIR, "static/reports")
+TTF_FILE = os.path.join(os.path.dirname(BASE_DIR), "frontend/msyh.ttc")
+
 
 # 基础配置
 DEBUG = os.getenv("DEBUG", "true").lower() == "true"
-HOST = os.getenv("HOST", "127.0.0.1")
+if platform.system() == 'Linux':
+    HOST = os.getenv("HOST", "0.0.0.0")
+else:
+    HOST = os.getenv("HOST", "127.0.0.1")
 PORT = int(os.getenv("PORT", 8080))
 WORKERS = int(os.getenv("WORKERS", 1))
 
@@ -10,7 +21,7 @@ WORKERS = int(os.getenv("WORKERS", 1))
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_DIR = os.path.join(BASE_DIR, "backend/static/uploads")
 REPORT_DIR = os.path.join(BASE_DIR, "backend/static/reports")
-TTF_FILE = os.path.join(BASE_DIR, "frontend/msyh.ttc")
+TTF_FILE = os.path.join(os.path.dirname(BASE_DIR), "frontend/msyh.ttc")
 
 # 允许的文件类型
 ALLOWED_FILE_TYPES = ["application/pdf"]
