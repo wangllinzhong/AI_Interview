@@ -33,7 +33,22 @@
 # 1. 克隆仓库
 git@github.com:wangllinzhong/AI_Interview.git
 
-# 2. docker
+# 2. 配置.env文件
+下载文件后需要在项目目录下创建.env文件
+在其中配置你的OPENAI_API_KEY和OPENAI_API_BASE
+
+# 3. linux下运行docker
+如果你是root用户，直接运行以下命令
+docker volume create ai-intreview-data
 docker build -t ai-interview .
 docker run -p 8080:8080 -v ai-intreview-data:/AI-Interview/backend/static ai-interview
+# 如果是普通用户，需要先创建docker组，将用户添加到docker组中
+sudo groupadd docker
+sudo usermod -aG docker $USER
+# 然后重新登录，运行以下命令
+docker volume create ai-intreview-data
+docker build -t ai-interview .
+docker run -v root -p 8080:8080 -v ai-intreview-data:/AI-Interview/backend/static ai-interview
+
+# 4. 访问http://localhost:8080
 ```

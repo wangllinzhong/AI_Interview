@@ -9,7 +9,7 @@ from langchain_core.messages import SystemMessage
 from langchain_core.tools import Tool
 from langchain_openai import OpenAI, ChatOpenAI
 from langchain.memory import ConversationBufferMemory
-from base.tools import search_question
+from backend.tools import search_question
 from base.prompt_template import InterviewPromptTemplate
 
 load_dotenv()

@@ -3,7 +3,7 @@ from typing import Dict, Any
 
 from langchain.chains.llm import LLMChain
 
-from base.utils import load_json
+from backend.utils import load_json
 
 
 class CustomLLMChain(LLMChain):

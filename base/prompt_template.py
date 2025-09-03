@@ -14,7 +14,7 @@ class InterviewPromptTemplate:
         # 应聘者回答分析模板
         self.answer_template = ""
         # 面试官回复模板
-        self.interviewer_template = ""
+        self.interview_template = ""
         # 通用模板
         self.general_template = ""
 
@@ -73,7 +73,8 @@ class InterviewPromptTemplate:
         - 同类关键词去重（如"Python"和"python"视为重复）
         - 使用示例格式输出的时候，不使用示例自带的关键词
         """
-        return PromptTemplate(template=requirement_template, input_variables=["job_description", "resume_keywords_json"])
+        return PromptTemplate(template=requirement_template,
+                              input_variables=["job_description", "resume_keywords_json"])
 
     @requirement_prompt.setter
     def requirement_prompt(self, template):
@@ -81,7 +82,7 @@ class InterviewPromptTemplate:
 
     @property
     def chat_template(self):
-        chat_template =  """
+        chat_template = """
             你是一名来自中国的专业的AI面试官，需要根据给定的关键词生成技术面试问题和标准答案。
             
             **核心指令**：
@@ -139,19 +140,21 @@ class InterviewPromptTemplate:
             ### 流程控制（根据评分二选一输出）：
             - 若评分≥80：{{"current_stage": "asking", "current": "请继续深入提问", "ai_scoring": 评分, "ai_comment": "评语"}}
             - 若评分<80：{{"current_stage": "asking", "current": "换一个问题继续提问", "ai_scoring": 评分, "ai_comment": "评语"}}
-
+    
             ### 输入信息：
             - 应聘者回答：{answer}
             - 参考答案：{correct_answer}
-            - 历史记录：{history}
             - 当前环节：{current_stage}
-
+    
             ### 输出要求：
-            - 仅返回上述两种JSON对象之一，绝对无其他内容。
+            - 仅返回上述两种JSON对象之一，绝对无其他内容。不要输出任何代码、注释或解释文本。
             - 评语示例："关键知识点遗漏，理解浅表"、"逻辑混乱，未区分本质差异"、"答对但未延伸技术场景"。
+            - 重要：直接输出JSON结果，不要实现评分逻辑或生成代码。
+    
+            ### 示例输出：
+            {{"current_stage": "asking", "current": "换一个问题继续提问", "ai_scoring": 75, "ai_comment": "关键知识点遗漏"}}
         """
-        return PromptTemplate(template=template,
-                              input_variables=["answer", "correct_answer", "history", "current_stage"])
+        return PromptTemplate(template=template, input_variables=["answer", "correct_answer", "current_stage"])
 
     @answer_template.setter
     def answer_template(self, template):

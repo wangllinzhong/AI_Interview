@@ -7,16 +7,17 @@ from langchain_community.document_loaders import PyPDFLoader
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, HumanMessagePromptTemplate
 from langchain_core.messages import SystemMessage, AIMessage, HumanMessage
 from langchain_openai import OpenAI, ChatOpenAI
+from langchain_core.output_parsers import StrOutputParser
 
 from base.struct_chain import CustomLLMChain
 from base.struct_callback import HistoryCallback
 from base.struct_memory import EnhanceConversationMemory
-from base.utils import load_json
+from backend.utils import load_json
 from base.prompt_template import InterviewPromptTemplate
 
 load_dotenv()
-os.environ["OPENAI_API_KEY"] = os.getenv("AZ_API_KEY")
-os.environ["OPENAI_API_BASE"] = os.getenv("POLO_API_BASE")
+os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
+os.environ["OPENAI_API_BASE"] = os.getenv("OPENAI_API_BASE")
 # os.environ["OPENAI_API_KEY"] = os.getenv("DEEPSEEK_API_KEY")
 # os.environ["OPENAI_API_BASE"] = os.getenv("DEEPSEEK_API_BASE")
 
@@ -95,8 +96,12 @@ class ChainMasterChat:
             verbose=True
         )
         # 用于分析应聘者的回答情况
-        memory = RunnablePassthrough.assign(history=RunnableLambda(lambda x: self.memory.buffer))
-        self.analyze_chain = memory | self.template.answer_template | self.model
+        # memory = RunnablePassthrough.assign(history=RunnableLambda(lambda x: self.memory.buffer))
+            # 将PromptTemplate转换为ChatPromptTemplate
+        human_message_prompt = HumanMessagePromptTemplate.from_template(self.template.answer_template.template)
+        chat_prompt = ChatPromptTemplate.from_messages([human_message_prompt])
+
+        self.analyze_chain = chat_prompt | self.chat_model | StrOutputParser()
         # 用于回答应聘者问题
         # self.answer_chain = self.template.interview_template | self.chat_model | StrOutputParser
         self.answer_chain = CustomLLMChain(
@@ -144,8 +149,8 @@ class ChainMasterChat:
         1. 通过llm解析判断应聘者的回答适用于的场景（深入提问、换一个问题、结束提问、由ai回答问题、结束面试）
         2. 对应聘者的回答进行ai打分、分析应聘者的回答
         """
-        memory = RunnablePassthrough.assign(history=RunnableLambda(lambda x: self.memory.buffer))
-        self.analyze_chain.steps[0] = memory
+        # memory = RunnablePassthrough.assign(history=RunnableLambda(lambda x: self.memory.buffer))
+        # self.analyze_chain.steps[0] = memory
         result = self.analyze_chain.invoke({
             "answer": self.memory.full_history[-1]['reply'],
             "correct_answer": self.memory.full_history[-1]['ai_output'],
